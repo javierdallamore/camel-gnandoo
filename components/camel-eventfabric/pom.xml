@@ -19,13 +19,13 @@
 		<relativePath>..</relativePath>
 	</parent>
 
-	<artifactId>camel-pubnub</artifactId>
+	<artifactId>camel-eventfabric</artifactId>
 	<packaging>bundle</packaging>
-	<name>Camel Component :: Pubnub</name>
-	<description>Camel Pubnub support</description>
+	<name>Camel Component :: EventFabric</name>
+	<description>Camel Event Fabric support</description>
 	<properties>
-		<camel.osgi.export.pkg>org.javierdallamore.camel.component.pubnub</camel.osgi.export.pkg>
-		<camel.osgi.export.service>org.apache.camel.spi.ComponentResolver;component=pubnub</camel.osgi.export.service>
+		<camel.osgi.export.pkg>org.javierdallamore.camel.component.eventfabric</camel.osgi.export.pkg>
+		<camel.osgi.export.service>org.apache.camel.spi.ComponentResolver;component=eventfabric</camel.osgi.export.service>
 	</properties>
 
 	<dependencies>
@@ -34,14 +34,9 @@
 			<artifactId>camel-core</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>2.3</version>
-		</dependency>
-		<dependency>
-			<groupId>com.pubnub</groupId>
-			<artifactId>pubnub</artifactId>
-			<version>3.6.3</version>
+        	<groupId>com.eventfabric</groupId>
+        	<artifactId>api</artifactId>
+        	<version>0.1.0</version>
 		</dependency>
 		<!-- testing -->
 		<dependency>
