@@ -48,7 +48,6 @@ import com.eventfabric.api.client.EventClient;
 public class EventFabricEndpoint extends DefaultEndpoint {
 	private static final Logger LOG = LoggerFactory
 			.getLogger(EventFabricEndpoint.class);
-	private final EventFabricComponent component;
 	private final String name;
 	private EndPointInfo streamsEndpoint;
 	private EndPointInfo sessionsEndpoint;
@@ -74,7 +73,6 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	public EventFabricEndpoint(String uri, EventFabricComponent component,
 			String name) {
 		super(uri, component);
-		this.component = component;
 		this.name = name;	
 	}
 

@@ -65,20 +65,16 @@ public class EventFabricProducer extends DefaultProducer {
 			channel = endpoint.getName();
 		}
 		try {
-			if (eventClient.isAuthenticated()) {
-				Event event = new Event(channel, value);
-				Response response = eventClient.send(event);
-				if (response.getStatus() == 201) {
-					LOG.info(String.format("%s sent to Event Fabric", endpoint.getName()));
-				} else if (response.getStatus() == 401 && attemps <= 3){
-					LOG.error(String.format("Event Fabric session expired. Trying to log in again. Attemp: %d", attemps));
-					eventClient.authenticate();
-					process(exchange);
-				} else {
-					LOG.error(String.format("Error sending %s to Event Fabric: %s", endpoint.getName(), response.getResult()));
-				}
+			Event event = new Event(channel, value);
+			Response response = eventClient.send(event);
+			if (response.getStatus() == 201) {
+				LOG.info(String.format("%s sent to Event Fabric", endpoint.getName()));
+			} else if (response.getStatus() == 401 && attemps <= 3) {
+				LOG.error(String.format("Event Fabric session expired. Trying to log in again. Attemp: %d", attemps));
+				eventClient.authenticate();
+				process(exchange);
 			} else {
-				LOG.error("Error logging in Event Fabric");
+				LOG.error(String.format("Error sending %s to Event Fabric: %s", endpoint.getName(), response.getResult()));
 			}
 		} catch (IOException e) {
 			LOG.error(e.getMessage());
