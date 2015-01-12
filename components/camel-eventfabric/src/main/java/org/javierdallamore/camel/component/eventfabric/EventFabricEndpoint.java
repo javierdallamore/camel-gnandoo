@@ -91,14 +91,14 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 				streamsEndpoint = new EndPointInfo(host, "/streams", port, secure);
 				sessionsEndpoint = new EndPointInfo(host, "/sessions", port, secure);
 				eventClient = new EventClient(username, password, streamsEndpoint, sessionsEndpoint);
-				if (eventClient.authenticate()) {
-					LOG.error("It was not possible to log in to Event Fabric. Check your credentials and endpoint");
-					System.exit(1);
+				if (!eventClient.authenticate()) {
+					LOG.error("It was not possible to authenticate in Event Fabric. Check your credentials and endpoint");
+					System.exit(0);
 				};
 			}
 		} catch (IOException e) {
-			LOG.error("It was not possible to log in to Event Fabric. Check your credentials and endpoint");
-			System.exit(1);
+			LOG.error(e.getMessage());
+			System.exit(0);
 		}
 	}
 
