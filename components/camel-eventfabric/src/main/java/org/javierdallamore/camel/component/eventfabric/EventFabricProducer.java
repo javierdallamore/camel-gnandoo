@@ -41,6 +41,7 @@ public class EventFabricProducer extends DefaultProducer {
 			.getLogger(EventFabricProducer.class);
 	private final EventFabricEndpoint endpoint;
 	private ObjectMapper mapper = new ObjectMapper();
+	private int attemps = 0;
 	
 	public EventFabricProducer(EventFabricEndpoint endpoint) {
 		super(endpoint);
@@ -54,27 +55,35 @@ public class EventFabricProducer extends DefaultProducer {
 	 */
 	@Override
 	public void process(Exchange exchange) throws Exception {
+		attemps += 1;
 		String body = exchange.getIn().getBody(String.class);
 		body = String.format("{\"data\": %s}", body);
 		ObjectNode value = (ObjectNode) mapper.readTree(body);
 		String channel = endpoint.getChannel();
+		EventClient eventClient = endpoint.getEventClient();
 		if (channel == null) {
 			channel = endpoint.getName();
 		}
 		try {
-			if (endpoint.isAuthenticated()) {
+			if (eventClient.isAuthenticated()) {
 				Event event = new Event(channel, value);
-				Response response = endpoint.getEventClient().send(event);
+				Response response = eventClient.send(event);
 				if (response.getStatus() == 201) {
-					System.out.println(String.format("%s sent to Event Fabric", endpoint.getName()));
+					LOG.info(String.format("%s sent to Event Fabric", endpoint.getName()));
+				} else if (response.getStatus() == 401 && attemps <= 3){
+					LOG.error(String.format("Event Fabric session expired. Trying to log in again. Attemp: %d", attemps));
+					eventClient.authenticate();
+					process(exchange);
 				} else {
-					System.out.println(String.format("Error sending %s to Event Fabric: %s", endpoint.getName(), response.getResult()));
+					LOG.error(String.format("Error sending %s to Event Fabric: %s", endpoint.getName(), response.getResult()));
 				}
 			} else {
-				System.out.println("Error logging in Event Fabric");
+				LOG.error("Error logging in Event Fabric");
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			LOG.error(e.getMessage());
+		} finally {
+			attemps = 0;
 		}
 	}
 }

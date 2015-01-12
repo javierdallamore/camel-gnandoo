@@ -50,7 +50,6 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 			.getLogger(EventFabricEndpoint.class);
 	private final EventFabricComponent component;
 	private final String name;
-	private boolean authenticated;
 	private EndPointInfo streamsEndpoint;
 	private EndPointInfo sessionsEndpoint;
 	private EventClient eventClient;
@@ -88,15 +87,18 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	protected void doStart() throws Exception {
 		super.doStart();
 		try {
-			if (eventClient == null && !isAuthenticated()) {
+			if (eventClient == null || !eventClient.isAuthenticated()) {
 				streamsEndpoint = new EndPointInfo(host, "/streams", port, secure);
 				sessionsEndpoint = new EndPointInfo(host, "/sessions", port, secure);
 				eventClient = new EventClient(username, password, streamsEndpoint, sessionsEndpoint);
-				authenticated = eventClient.authenticate();
+				if (eventClient.authenticate()) {
+					LOG.error("It was not possible to log in to Event Fabric. Check your credentials and endpoint");
+					System.exit(1);
+				};
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			LOG.error("It was not possible to log in to Event Fabric. Check your credentials and endpoint");
+			System.exit(1);
 		}
 	}
 
@@ -119,9 +121,6 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 		return this.name;
 	}
 
-	public boolean isAuthenticated() {
-		return authenticated;
-	}
 	public String getChannel() {
 		return channel;
 	}
