@@ -19,6 +19,9 @@
 package org.javierdallamore.camel.component.eventfabric;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.impl.DefaultProducer;
@@ -29,6 +32,7 @@ import com.eventfabric.api.client.EndPointInfo;
 import com.eventfabric.api.client.EventClient;
 import com.eventfabric.api.client.Response;
 import com.eventfabric.api.model.Event;
+import com.sun.xml.fastinfoset.Encoder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,8 +60,13 @@ public class EventFabricProducer extends DefaultProducer {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		attemps += 1;
-		String body = exchange.getIn().getBody(String.class);
-		body = String.format("{\"data\": %s}", body);
+		byte[] bs = exchange.getIn().getBody(byte[].class);
+		String body = "{\"data\": []}";
+		try {
+			body = String.format("{\"data\": %s}", new String(bs, "UTF-8"));
+		} catch(UnsupportedEncodingException uee) {
+		    LOG.error(uee.getMessage());
+		}
 		ObjectNode value = (ObjectNode) mapper.readTree(body);
 		String channel = endpoint.getChannel();
 		EventClient eventClient = endpoint.getEventClient();
