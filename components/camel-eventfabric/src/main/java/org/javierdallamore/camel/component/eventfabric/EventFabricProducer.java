@@ -21,6 +21,7 @@ package org.javierdallamore.camel.component.eventfabric;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 
 import org.apache.camel.Exchange;
@@ -60,14 +61,26 @@ public class EventFabricProducer extends DefaultProducer {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		attemps += 1;
-		byte[] bs = exchange.getIn().getBody(byte[].class);
-		String body = "{\"data\": []}";
-		try {
-			body = String.format("{\"data\": %s}", new String(bs, "UTF-8"));
-		} catch(UnsupportedEncodingException uee) {
-		    LOG.error(uee.getMessage());
-		}
-		ObjectNode value = (ObjectNode) mapper.readTree(body);
+		
+		
+		/*
+		 byte[] latin1 = exchange.getIn().getBody(byte[].class);
+		 Charset utf8charset = Charset.forName("UTF-8");
+		Charset iso88591charset = Charset.forName("ISO-8859-1");
+		ByteBuffer inputBuffer = ByteBuffer.wrap(latin1);
+		// decode UTF-8
+		CharBuffer data = iso88591charset.decode(inputBuffer);
+		// encode ISO-8559-1
+		ByteBuffer outputBuffer = utf8charset.encode(data);
+		byte[] outputData = outputBuffer.array();
+		
+		
+		*/
+		
+		String body = exchange.getIn().getBody(String.class);
+		String data = String.format("{\"data\": %s}", body);
+		
+		ObjectNode value = (ObjectNode) mapper.readTree(data);
 		String channel = endpoint.getChannel();
 		EventClient eventClient = endpoint.getEventClient();
 		if (channel == null) {
