@@ -64,7 +64,8 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	private int port;
 	@UriParam
 	private boolean secure;
-	
+	@UriParam
+	private String inputEncoding;
 
 	public EventClient getEventClient() {
 		return eventClient;
@@ -166,4 +167,13 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	public void setSecure(boolean secure) {
 		this.secure = secure;
 	}
+
+	public String getInputEncoding() {
+		return inputEncoding;
+	}
+
+	public void setInputEncoding(String encoding) {
+		this.inputEncoding = encoding;
+	}
+	
 }

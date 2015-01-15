@@ -26,7 +26,9 @@ import java.nio.charset.Charset;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.impl.DefaultProducer;
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
 import com.eventfabric.api.client.EndPointInfo;
@@ -61,33 +63,41 @@ public class EventFabricProducer extends DefaultProducer {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		attemps += 1;
+		String data;
+		if (endpoint.getInputEncoding() != null) {
+			byte[] latin1 = exchange.getIn().getBody(byte[].class);
+			Charset utf8charset = Charset.forName("UTF-8");
+			Charset iso88591charset = Charset.forName(endpoint.getInputEncoding());
+			ByteBuffer inputBuffer = ByteBuffer.wrap(latin1);
+			// decode UTF-8
+			CharBuffer charBuffer = iso88591charset.decode(inputBuffer);
+			// encode ISO-8559-1
+			ByteBuffer outputBuffer = utf8charset.encode(charBuffer);
+			byte[] outputData = outputBuffer.array();
+			data = new String(outputData, "UTF-8");
+		} else {
+			data = exchange.getIn().getBody(String.class);
+		}
 		
+		ObjectNode jsonNode;
 		
-		/*
-		 byte[] latin1 = exchange.getIn().getBody(byte[].class);
-		 Charset utf8charset = Charset.forName("UTF-8");
-		Charset iso88591charset = Charset.forName("ISO-8859-1");
-		ByteBuffer inputBuffer = ByteBuffer.wrap(latin1);
-		// decode UTF-8
-		CharBuffer data = iso88591charset.decode(inputBuffer);
-		// encode ISO-8559-1
-		ByteBuffer outputBuffer = utf8charset.encode(data);
-		byte[] outputData = outputBuffer.array();
+		Object result = mapper.readTree(data);
 		
+		if (result instanceof ArrayNode) {
+			jsonNode = mapper.createObjectNode();
+			ArrayNode node = jsonNode.putArray("data");
+			node.addAll((ArrayNode)result);
+		} else {
+			jsonNode = (ObjectNode)result;
+		}
 		
-		*/
-		
-		String body = exchange.getIn().getBody(String.class);
-		String data = String.format("{\"data\": %s}", body);
-		
-		ObjectNode value = (ObjectNode) mapper.readTree(data);
 		String channel = endpoint.getChannel();
 		EventClient eventClient = endpoint.getEventClient();
 		if (channel == null) {
 			channel = endpoint.getName();
 		}
 		try {
-			Event event = new Event(channel, value);
+			Event event = new Event(channel, jsonNode);
 			Response response = eventClient.send(event);
 			if (response.getStatus() == 201) {
 				LOG.info(String.format("%s sent to Event Fabric", endpoint.getName()));
