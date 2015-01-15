@@ -64,14 +64,12 @@ public class EventFabricProducer extends DefaultProducer {
 	public void process(Exchange exchange) throws Exception {
 		attemps += 1;
 		String data;
-		if (endpoint.getInputEncoding() != null) {
-			byte[] latin1 = exchange.getIn().getBody(byte[].class);
+		if (endpoint.getInputEncoding() != null && !endpoint.getInputEncoding().isEmpty()) {
+			byte[] body = exchange.getIn().getBody(byte[].class);
 			Charset utf8charset = Charset.forName("UTF-8");
-			Charset iso88591charset = Charset.forName(endpoint.getInputEncoding());
-			ByteBuffer inputBuffer = ByteBuffer.wrap(latin1);
-			// decode UTF-8
-			CharBuffer charBuffer = iso88591charset.decode(inputBuffer);
-			// encode ISO-8559-1
+			Charset inputcharset = Charset.forName(endpoint.getInputEncoding());
+			ByteBuffer inputBuffer = ByteBuffer.wrap(body);
+			CharBuffer charBuffer = inputcharset.decode(inputBuffer);
 			ByteBuffer outputBuffer = utf8charset.encode(charBuffer);
 			byte[] outputData = outputBuffer.array();
 			data = new String(outputData, "UTF-8");
