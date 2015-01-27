@@ -19,26 +19,21 @@
 package org.javierdallamore.camel.component.eventfabric;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.impl.DefaultProducer;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.eventfabric.api.client.EndPointInfo;
 import com.eventfabric.api.client.EventClient;
 import com.eventfabric.api.client.Response;
 import com.eventfabric.api.model.Event;
-import com.sun.xml.fastinfoset.Encoder;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @version $Revision: 1.1 $

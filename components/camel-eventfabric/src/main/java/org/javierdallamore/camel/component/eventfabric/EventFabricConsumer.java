@@ -18,8 +18,6 @@
 */
 package org.javierdallamore.camel.component.eventfabric;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.ExchangePattern;
 import org.apache.camel.Processor;
 import org.apache.camel.impl.DefaultConsumer;
 import org.slf4j.Logger;
