@@ -53,6 +53,8 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	@UriParam
 	private String channel;
 	@UriParam
+	private String bucket;
+	@UriParam
 	private String host;
 	@UriParam
 	private int port;
@@ -120,6 +122,14 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 
 	public void setChannel(String channel) {
 		this.channel = channel;
+	}
+	
+	public String getBucket() {
+		return bucket;
+	}
+
+	public void setBucket(String bucket) {
+		this.bucket = bucket;
 	}
 	
 	public String getUsername() {

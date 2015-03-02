@@ -90,7 +90,7 @@ public class EventFabricProducer extends DefaultProducer {
 			channel = endpoint.getName();
 		}
 		try {
-			Event event = new Event(channel, jsonNode);
+			Event event = new Event(channel, jsonNode, endpoint.getBucket());
 			Response response = eventClient.send(event);
 			if (response.getStatus() == 201) {
 				LOG.info(String.format("%s sent to Event Fabric", endpoint.getName()));
