@@ -50,6 +50,11 @@ public class EventFabricProducer extends DefaultProducer {
 		this.endpoint = endpoint;
 	}
 
+	@Override
+	public boolean isSingleton() {
+		return true;
+	}
+
 	/**
 	 *
 	 * @param exchange
