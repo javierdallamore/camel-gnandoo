@@ -99,7 +99,7 @@ public class EventFabricProducer extends DefaultProducer {
 			Event event = new Event(channel, jsonNode, endpoint.getBucket());
 			Response response;
 			int expected;
-			if (action == null || action == "post") {
+			if (action == null && !"patch".equals(action)) {
 				response = eventClient.send(event);
 				expected = 201;
 			} else {
