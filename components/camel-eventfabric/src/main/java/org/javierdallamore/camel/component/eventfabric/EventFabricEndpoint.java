@@ -55,6 +55,8 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	@UriParam
 	private String bucket;
 	@UriParam
+	private String action;
+	@UriParam
 	private String host;
 	@UriParam
 	private int port;
@@ -130,6 +132,13 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 		this.bucket = bucket;
 	}
 	
+	public String getAction() {
+		return action;
+	}
+
+	public void setAction(String action) {
+		this.action = action;
+	}
 	public String getUsername() {
 		return username;
 	}

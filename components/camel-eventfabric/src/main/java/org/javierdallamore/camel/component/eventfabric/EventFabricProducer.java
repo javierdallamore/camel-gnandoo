@@ -95,9 +95,19 @@ public class EventFabricProducer extends DefaultProducer {
 			channel = endpoint.getName();
 		}
 		try {
+			String action = endpoint.getAction();
 			Event event = new Event(channel, jsonNode, endpoint.getBucket());
-			Response response = eventClient.send(event);
-			if (response.getStatus() == 201) {
+			Response response;
+			int expected;
+			if (action == null || action == "post") {
+				response = eventClient.send(event);
+				expected = 201;
+			} else {
+				response = eventClient.patch(event);
+				expected = 200;
+			}
+			
+			if (response.getStatus() == expected) {
 				LOG.info(String.format("%s sent to Event Fabric", endpoint.getName()));
 			} else if (response.getStatus() == 401 && attemps <= 3) {
 				LOG.error(String.format("Event Fabric session expired. Trying to log in again. Attemp: %d", attemps));
