@@ -18,34 +18,18 @@
  */
 package org.javierdallamore.camel.component.weblogic;
 
-import java.io.IOException;
-import java.util.Date;
-import java.util.Hashtable;
 import java.util.Timer;
-
-import javax.jms.JMSException;
-import javax.jms.Queue;
-import javax.jms.QueueBrowser;
-import javax.jms.QueueConnection;
-import javax.jms.QueueConnectionFactory;
-import javax.jms.QueueSession;
-import javax.jms.Session;
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 
 import org.apache.camel.Consumer;
 import org.apache.camel.Processor;
 import org.apache.camel.Producer;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.api.management.ManagedAttribute;
-import org.apache.camel.component.timer.TimerComponent;
-import org.apache.camel.component.timer.TimerConsumer;
 import org.apache.camel.impl.DefaultEndpoint;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.camel.spi.UriEndpoint;
 import org.apache.camel.spi.UriParam;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * An endpoint for working with <a
  * href="http://eventfabric.com/">EventFabric</a>
@@ -74,6 +58,10 @@ public class WebLogicEndpoint extends DefaultEndpoint {
     private long period = 1000;
     @UriParam
     private long delay = 1000;
+    @UriParam
+    private boolean readMessage = true;
+    @UriParam
+    private boolean readMessageBody = true;
 
 	public WebLogicEndpoint(String uri, WebLogicComponent component,
 			String name) {
@@ -204,5 +192,21 @@ public class WebLogicEndpoint extends DefaultEndpoint {
 
 	public void setDelay(long delay) {
 		this.delay = delay;
+	}
+
+	public boolean isReadMessage() {
+		return readMessage;
+	}
+
+	public void setReadMessage(boolean readMessage) {
+		this.readMessage = readMessage;
+	}
+
+	public boolean isReadMessageBody() {
+		return readMessageBody;
+	}
+
+	public void setReadMessageBody(boolean readMessageBody) {
+		this.readMessageBody = readMessageBody;
 	}
 }

@@ -18,18 +18,13 @@
 */
 package org.javierdallamore.camel.component.weblogic;
 
-import java.text.SimpleDateFormat;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.camel.Endpoint;
-import org.apache.camel.component.timer.TimerConsumer;
-import org.apache.camel.component.timer.TimerEndpoint;
-import org.apache.camel.impl.DefaultComponent;
 import org.apache.camel.impl.UriEndpointComponent;
 
 /**

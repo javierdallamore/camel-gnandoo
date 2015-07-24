@@ -24,10 +24,11 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.atomic.AtomicLong;
 
+import javax.jms.DeliveryMode;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.Queue;
@@ -45,8 +46,12 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.StartupListener;
-import org.apache.camel.component.timer.TimerEndpoint;
 import org.apache.camel.impl.DefaultConsumer;
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +71,58 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		super(endpoint, processor);
 		this.endpoint = endpoint;
 	}
+	
+	private String generateBody(List<Message> messages) throws JsonGenerationException, JsonMappingException, IOException, JMSException {
+		ObjectMapper mapper = new ObjectMapper();
+		ObjectNode root = mapper.createObjectNode();
+		root.put("size", messages.size());
+		if (endpoint.isReadMessage()) {
+			ArrayNode messagesNode = root.putArray("messages");
+			for (Iterator<Message> iter = messages.iterator(); iter
+					.hasNext();) {
+				ObjectNode msgNode = generateMessageNode(mapper, (Message) iter.next());
+				messagesNode.add(msgNode);
+			}
+		}
+		return mapper.writeValueAsString(root);
+	}
+
+	private ObjectNode generateMessageNode(ObjectMapper mapper, Message message) throws JMSException {
+		ObjectNode msgNode = mapper.createObjectNode();
+		Enumeration<String> names = message.getPropertyNames();
+		while (names.hasMoreElements()) {
+			String name = (String)names.nextElement();
+			Object value = message.getObjectProperty(name);
+			if (value != null) {
+				msgNode.put(name, value.toString());
+			}
+		}
+		
+		if (endpoint.isReadMessageBody()) {
+			if (message instanceof TextMessage) {
+				TextMessage txtMsg = (TextMessage) message;
+				msgNode.put("body", txtMsg.getText());
+				
+			}
+		}
+		
+		msgNode.put("correlationID", message.getJMSCorrelationID());
+		msgNode.put("deliveryModeCode", message.getJMSDeliveryMode());
+		if (message.getJMSDeliveryMode() == DeliveryMode.PERSISTENT) {
+			msgNode.put("deliveryMode", "PERSISTENT");
+		} else {
+			msgNode.put("deliveryMode", "NON_PERSISTENT");
+		}
+		msgNode.put("expiration", message.getJMSExpiration());
+		msgNode.put("messageID", message.getJMSMessageID());
+		msgNode.put("priority", message.getJMSPriority());
+		msgNode.put("redelivered", message.getJMSRedelivered());
+		msgNode.put("timestamp", message.getJMSTimestamp());
+		msgNode.put("type", message.getJMSType());
+		msgNode.put("destination", "" + message.getJMSDestination());
+		msgNode.put("replyTo", "" + message.getJMSReplyTo());
+		return msgNode;
+	}
 
 	@Override
 	protected void doStart() throws Exception {
@@ -80,30 +137,16 @@ public class WebLogicConsumer extends DefaultConsumer implements
 				try {
 					List<Message> messages = Collections.list(browser
 							.getEnumeration());
-					for (Iterator<Message> iter = messages.iterator(); iter
-							.hasNext();) {
-						Message tempMsg = (Message) iter.next();
-						System.out.println("Message" + tempMsg);
-
-						Enumeration names = tempMsg.getPropertyNames();
-						while (names.hasMoreElements()) {
-							String name = "" + names.nextElement();
-							System.out.println(name + ": "
-									+ tempMsg.getObjectProperty(name));
-						}
-
-						if (tempMsg instanceof TextMessage) {
-							TextMessage txtMsg = (TextMessage) tempMsg;
-							Exchange exchange = endpoint.createExchange();
-							exchange.getIn().setBody(txtMsg.getText());
-							try {
-								getProcessor().process(exchange);
-							} catch (Exception e) {
-								getExceptionHandler().handleException(e);
-							}
-						}
+					
+					String body = generateBody(messages);
+					Exchange exchange = endpoint.createExchange();
+					exchange.getIn().setBody(body);
+					try {
+						getProcessor().process(exchange);
+					} catch (Exception e) {
+						getExceptionHandler().handleException(e);
 					}
-				} catch (JMSException e) {
+				} catch (Exception e) {
 					LOG.error(e.getMessage());
 					LOG.warn(
 							"Error processing exchange. This exception will be ignored, to let the timer be able to trigger again.",
