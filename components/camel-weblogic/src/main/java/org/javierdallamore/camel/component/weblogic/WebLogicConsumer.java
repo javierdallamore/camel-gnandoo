@@ -24,7 +24,6 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -101,8 +100,7 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		if (endpoint.isReadMessageBody()) {
 			if (message instanceof TextMessage) {
 				TextMessage txtMsg = (TextMessage) message;
-				msgNode.put("body", txtMsg.getText());
-				
+				msgNode.put("body", txtMsg.getText());	
 			}
 		}
 		

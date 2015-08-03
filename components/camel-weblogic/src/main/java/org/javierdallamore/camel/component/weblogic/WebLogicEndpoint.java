@@ -93,6 +93,7 @@ public class WebLogicEndpoint extends DefaultEndpoint {
 
 	@Override
 	public Producer createProducer() throws Exception {
+		LOG.error("Cannot produce to a WebLogicEndpoint: " + getEndpointUri());
 		throw new RuntimeCamelException("Cannot produce to a WebLogicEndpoint: " + getEndpointUri());
 	}
 
