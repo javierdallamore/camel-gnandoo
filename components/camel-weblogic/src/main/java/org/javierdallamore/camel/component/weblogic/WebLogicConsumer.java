@@ -65,6 +65,8 @@ public class WebLogicConsumer extends DefaultConsumer implements
 	private volatile TimerTask task;
 	private volatile boolean configured;
 	private QueueBrowser browser;
+	private Queue q;
+	private QueueConnection qc;
 
 	public WebLogicConsumer(WebLogicEndpoint endpoint, Processor processor) {
 		super(endpoint, processor);
@@ -133,6 +135,11 @@ public class WebLogicConsumer extends DefaultConsumer implements
 					return;
 				}
 				try {
+					qc.start();
+					QueueSession qsess = qc.createQueueSession(false,
+							Session.AUTO_ACKNOWLEDGE);
+					browser = qsess.createBrowser(q);
+					
 					List<Message> messages = Collections.list(browser
 							.getEnumeration());
 					
@@ -144,6 +151,9 @@ public class WebLogicConsumer extends DefaultConsumer implements
 					} catch (Exception e) {
 						getExceptionHandler().handleException(e);
 					}
+					browser.close();
+					qsess.close();
+					qc.stop();
 				} catch (Exception e) {
 					LOG.error(e.getMessage());
 					LOG.warn(
@@ -223,28 +233,11 @@ public class WebLogicConsumer extends DefaultConsumer implements
 				this.endpoint.getPassword());
 
 		InitialContext ctx;
-
 		ctx = new InitialContext(properties);
-
-		System.out.println("Got InitialContext " + ctx.toString());
-
 		QueueConnectionFactory qcf = (QueueConnectionFactory) ctx
 				.lookup(this.endpoint.getCf());
-		System.out.println("Got QueueConnectionFactory " + qcf.toString());
-
-		QueueConnection qc = qcf.createQueueConnection();
-		System.out.println("Got QueueConnection " + qc.toString());
-
-		QueueSession qsess = qc.createQueueSession(false,
-				Session.AUTO_ACKNOWLEDGE);
-		System.out.println("Got QueueSession " + qsess.toString());
-
-		Queue q = (Queue) ctx.lookup(this.endpoint.getQueue());
-		System.out.println("Got Queue " + q.toString());
-
-		browser = qsess.createBrowser(q);
-		System.out.println("Got Browser " + browser.toString());
-
+		q = (Queue) ctx.lookup(this.endpoint.getQueue());
+		qc = qcf.createQueueConnection();
 		qc.start();
 	}
 }
