@@ -43,7 +43,7 @@ public class WebLogicEndpoint extends DefaultEndpoint {
     @UriParam
     private String name;
 	@UriParam
-	private String url;
+	private String host;
 	@UriParam
 	private String user;
 	@UriParam
@@ -52,6 +52,8 @@ public class WebLogicEndpoint extends DefaultEndpoint {
 	private String cf;
 	@UriParam
 	private String queue;
+	@UriParam
+	private String destinationName;
     @UriParam
     private Timer timer;
     @UriParam
@@ -59,9 +61,11 @@ public class WebLogicEndpoint extends DefaultEndpoint {
     @UriParam
     private long delay = 1000;
     @UriParam
-    private boolean readMessage = true;
+    private boolean readMetrics = true;
     @UriParam
-    private boolean readMessageBody = true;
+    private boolean readMessage = false;
+    @UriParam
+    private boolean readMessageBody = false;
 
 	public WebLogicEndpoint(String uri, WebLogicComponent component,
 			String name) {
@@ -139,12 +143,12 @@ public class WebLogicEndpoint extends DefaultEndpoint {
         return (WebLogicComponent) super.getComponent();
     }
     
-	public String getUrl() {
-		return url;
+	public String getHost() {
+		return host;
 	}
 
-	public void setUrl(String url) {
-		this.url = url;
+	public void setHost(String host) {
+		this.host = host;
 	}
 
 	public String getUser() {
@@ -179,6 +183,15 @@ public class WebLogicEndpoint extends DefaultEndpoint {
 		this.queue = queue;
 	}
 
+	public String getDestinationName() {
+		return destinationName;
+	}
+
+	public void setDestinationName(String destinationName) {
+		this.destinationName = destinationName;
+	}
+
+	
 	public long getPeriod() {
 		return period;
 	}
@@ -209,5 +222,13 @@ public class WebLogicEndpoint extends DefaultEndpoint {
 
 	public void setReadMessageBody(boolean readMessageBody) {
 		this.readMessageBody = readMessageBody;
+	}
+	
+	public boolean isReadMetrics() {
+		return readMetrics;
+	}
+
+	public void setReadMetrics(boolean readMetrics) {
+		this.readMetrics = readMetrics;
 	}
 }

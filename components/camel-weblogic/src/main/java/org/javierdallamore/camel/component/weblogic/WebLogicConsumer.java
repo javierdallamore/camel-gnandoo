@@ -19,6 +19,7 @@
 package org.javierdallamore.camel.component.weblogic;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -37,6 +38,18 @@ import javax.jms.QueueConnectionFactory;
 import javax.jms.QueueSession;
 import javax.jms.Session;
 import javax.jms.TextMessage;
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.IntrospectionException;
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanException;
+import javax.management.MBeanInfo;
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+import javax.management.remote.JMXConnector;
+import javax.management.remote.JMXConnectorFactory;
+import javax.management.remote.JMXServiceURL;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -47,6 +60,7 @@ import org.apache.camel.Processor;
 import org.apache.camel.StartupListener;
 import org.apache.camel.impl.DefaultConsumer;
 import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -67,45 +81,52 @@ public class WebLogicConsumer extends DefaultConsumer implements
 	private QueueBrowser browser;
 	private Queue q;
 	private QueueConnection qc;
+	private MBeanInfo bean;
+	private JMXConnector jmxCon;
+	private ObjectMapper mapper;
+	private ObjectName mbeanName;
+	private MBeanServerConnection con;
 
 	public WebLogicConsumer(WebLogicEndpoint endpoint, Processor processor) {
 		super(endpoint, processor);
 		this.endpoint = endpoint;
+		this.mapper = new ObjectMapper();
 	}
-	
-	private String generateBody(List<Message> messages) throws JsonGenerationException, JsonMappingException, IOException, JMSException {
-		ObjectMapper mapper = new ObjectMapper();
-		ObjectNode root = mapper.createObjectNode();
-		root.put("size", messages.size());
+
+	private ObjectNode generateJMSBody(List<Message> messages)
+			throws JsonGenerationException, JsonMappingException, IOException,
+			JMSException {
+		ObjectNode msgRoot = mapper.createObjectNode();
 		if (endpoint.isReadMessage()) {
-			ArrayNode messagesNode = root.putArray("messages");
-			for (Iterator<Message> iter = messages.iterator(); iter
-					.hasNext();) {
-				ObjectNode msgNode = generateMessageNode(mapper, (Message) iter.next());
+			ArrayNode messagesNode = msgRoot.putArray("messages");
+			for (Iterator<Message> iter = messages.iterator(); iter.hasNext();) {
+				ObjectNode msgNode = generateMessageNode(mapper,
+						(Message) iter.next());
 				messagesNode.add(msgNode);
 			}
 		}
-		return mapper.writeValueAsString(root);
+		return msgRoot;
 	}
 
-	private ObjectNode generateMessageNode(ObjectMapper mapper, Message message) throws JMSException {
+	private ObjectNode generateMessageNode(ObjectMapper mapper, Message message)
+			throws JMSException {
 		ObjectNode msgNode = mapper.createObjectNode();
 		Enumeration<String> names = message.getPropertyNames();
 		while (names.hasMoreElements()) {
-			String name = (String)names.nextElement();
+			String name = (String) names.nextElement();
 			Object value = message.getObjectProperty(name);
 			if (value != null) {
 				msgNode.put(name, value.toString());
 			}
 		}
-		
+
 		if (endpoint.isReadMessageBody()) {
 			if (message instanceof TextMessage) {
 				TextMessage txtMsg = (TextMessage) message;
-				msgNode.put("body", txtMsg.getText());	
+				msgNode.put("body", txtMsg.getText());
 			}
 		}
-		
+
 		msgNode.put("correlationID", message.getJMSCorrelationID());
 		msgNode.put("deliveryModeCode", message.getJMSDeliveryMode());
 		if (message.getJMSDeliveryMode() == DeliveryMode.PERSISTENT) {
@@ -135,15 +156,16 @@ public class WebLogicConsumer extends DefaultConsumer implements
 					return;
 				}
 				try {
-					qc.start();
-					QueueSession qsess = qc.createQueueSession(false,
-							Session.AUTO_ACKNOWLEDGE);
-					browser = qsess.createBrowser(q);
-					
-					List<Message> messages = Collections.list(browser
-							.getEnumeration());
-					
-					String body = generateBody(messages);
+					ObjectNode root = mapper.createObjectNode();
+					if (endpoint.isReadMessage()
+							|| endpoint.isReadMessageBody()) {
+						root.put("messages", processJMS());
+					}
+					if (endpoint.isReadMetrics()) {
+						root.put("metrics", processJMX());
+					}
+					String body = mapper.writeValueAsString(root);
+
 					Exchange exchange = endpoint.createExchange();
 					exchange.getIn().setBody(body);
 					try {
@@ -151,9 +173,6 @@ public class WebLogicConsumer extends DefaultConsumer implements
 					} catch (Exception e) {
 						getExceptionHandler().handleException(e);
 					}
-					browser.close();
-					qsess.close();
-					qc.stop();
 				} catch (Exception e) {
 					LOG.error(e.getMessage());
 					LOG.warn(
@@ -172,6 +191,45 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		}
 	}
 
+	private ObjectNode processJMS() throws JMSException,
+			JsonGenerationException, JsonMappingException, IOException {
+		qc.start();
+		QueueSession qsess = qc.createQueueSession(false,
+				Session.AUTO_ACKNOWLEDGE);
+		browser = qsess.createBrowser(q);
+		List<Message> messages = Collections.list(browser.getEnumeration());
+
+		browser.close();
+		qsess.close();
+		qc.stop();
+		return generateJMSBody(messages);
+	}
+
+	private ObjectNode processJMX() throws IOException  {
+		ObjectNode metricsRoot = mapper.createObjectNode();
+		try {
+			initJMX();
+			for (MBeanAttributeInfo attr : bean.getAttributes()) {
+				String attrName = "";
+				Object attrValue = null;
+				try {
+					attrName = attr.getName();
+					attrValue = con.getAttribute(mbeanName, attr.getName());
+					if (attrValue != null) {
+						metricsRoot.put(attrName, attrValue.toString());
+					}
+				} catch (Exception ex) {
+					LOG.warn(attrName + ": " + attrValue + "\n" + ex.toString());
+				}
+			}
+		} catch (Exception ex) {
+			if (jmxCon != null) {
+				jmxCon.close();
+			}
+		}
+		return metricsRoot;
+	}
+
 	@Override
 	protected void doStop() throws Exception {
 		if (task != null) {
@@ -182,17 +240,25 @@ public class WebLogicConsumer extends DefaultConsumer implements
 
 		// remove timer
 		endpoint.removeTimer(this);
+		try {
+			browser.close();
+			qc.close();
+			jmxCon.close();
+		} catch (Exception ex) {
+			LOG.error(ex.getMessage());
+		}
 	}
 
 	protected void configureTask(TimerTask task, Timer timer) {
 		try {
-			init();
+			if (this.endpoint.isReadMessageBody()
+					|| this.endpoint.isReadMessage()) {
+				initJMS();
+			}
 			timer.scheduleAtFixedRate(task, endpoint.getDelay(),
 					endpoint.getPeriod());
 			configured = true;
-		} catch (JMSException e) {
-			LOG.error(e.getMessage());
-		} catch (NamingException e) {
+		} catch (Exception e) {
 			LOG.error(e.getMessage());
 		}
 	}
@@ -222,12 +288,13 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		return (WebLogicEndpoint) super.getEndpoint();
 	}
 
-	private void init() throws JMSException, NamingException {
+	private void initJMS() throws JMSException, NamingException {
 		// create InitialContext
 		Hashtable<String, String> properties = new Hashtable<String, String>();
 		properties.put(Context.INITIAL_CONTEXT_FACTORY,
 				"weblogic.jndi.WLInitialContextFactory");
-		properties.put(Context.PROVIDER_URL, this.endpoint.getUrl());
+		String url = "t3://" + this.endpoint.getHost();
+		properties.put(Context.PROVIDER_URL, url);
 		properties.put(Context.SECURITY_PRINCIPAL, this.endpoint.getUser());
 		properties.put(Context.SECURITY_CREDENTIALS,
 				this.endpoint.getPassword());
@@ -239,5 +306,37 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		q = (Queue) ctx.lookup(this.endpoint.getQueue());
 		qc = qcf.createQueueConnection();
 		qc.start();
+	}
+
+	private void initJMX() throws IOException, InstanceNotFoundException,
+			IntrospectionException, ReflectionException {
+		String[] endpoint = this.endpoint.getHost().split(":");
+		String hostname = endpoint[0];
+		int port = Integer.parseInt(endpoint[1]);
+		String protocol = "rmi";
+		String jndiroot = new String("/jndi/iiop://" + hostname + ":" + port
+				+ "/");
+		String mserver = "weblogic.management.mbeanservers.runtime";
+		JMXServiceURL serviceURL = new JMXServiceURL(protocol, hostname, port,
+				jndiroot + mserver);
+
+		Hashtable<String, String> h = new Hashtable<String, String>();
+		h.put(Context.SECURITY_PRINCIPAL, this.endpoint.getUser());
+		h.put(Context.SECURITY_CREDENTIALS, this.endpoint.getPassword());
+		jmxCon = JMXConnectorFactory.connect(serviceURL, h);
+
+		String destinationName = this.endpoint.getDestinationName();
+		con = jmxCon.getMBeanServerConnection();
+		for (ObjectName objNames : con.queryNames(null, null)) {
+			if (objNames.getCanonicalName().contains("Name=" + destinationName)) {
+				this.bean = con.getMBeanInfo(objNames);
+				this.mbeanName = objNames;
+				break;
+			}
+		}
+		if (this.bean == null) {
+			throw new IOException("Destination Name " + destinationName
+					+ " does not exists in server " + this.endpoint.getHost());
+		}
 	}
 }
