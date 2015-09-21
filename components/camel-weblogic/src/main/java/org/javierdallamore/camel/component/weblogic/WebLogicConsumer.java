@@ -19,12 +19,13 @@
 package org.javierdallamore.camel.component.weblogic;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -38,11 +39,9 @@ import javax.jms.QueueConnectionFactory;
 import javax.jms.QueueSession;
 import javax.jms.Session;
 import javax.jms.TextMessage;
-import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
 import javax.management.MBeanAttributeInfo;
-import javax.management.MBeanException;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
@@ -60,7 +59,6 @@ import org.apache.camel.Processor;
 import org.apache.camel.StartupListener;
 import org.apache.camel.impl.DefaultConsumer;
 import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -85,7 +83,7 @@ public class WebLogicConsumer extends DefaultConsumer implements
 	private JMXConnector jmxCon;
 	private ObjectMapper mapper;
 	private ObjectName mbeanName;
-	private MBeanServerConnection con;
+	private HashSet<String> attributes;
 
 	public WebLogicConsumer(WebLogicEndpoint endpoint, Processor processor) {
 		super(endpoint, processor);
@@ -185,49 +183,10 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		// only configure task if CamelContext already started, otherwise the
 		// StartupListener
 		// is configuring the task later
-		if (!configured && endpoint.getCamelContext().getStatus().isStarted()) {
+		if (!configured) {
 			Timer timer = endpoint.getTimer(this);
 			configureTask(task, timer);
 		}
-	}
-
-	private ObjectNode processJMS() throws JMSException,
-			JsonGenerationException, JsonMappingException, IOException {
-		qc.start();
-		QueueSession qsess = qc.createQueueSession(false,
-				Session.AUTO_ACKNOWLEDGE);
-		browser = qsess.createBrowser(q);
-		List<Message> messages = Collections.list(browser.getEnumeration());
-
-		browser.close();
-		qsess.close();
-		qc.stop();
-		return generateJMSBody(messages);
-	}
-
-	private ObjectNode processJMX() throws IOException  {
-		ObjectNode metricsRoot = mapper.createObjectNode();
-		try {
-			initJMX();
-			for (MBeanAttributeInfo attr : bean.getAttributes()) {
-				String attrName = "";
-				Object attrValue = null;
-				try {
-					attrName = attr.getName();
-					attrValue = con.getAttribute(mbeanName, attr.getName());
-					if (attrValue != null) {
-						metricsRoot.put(attrName, attrValue.toString());
-					}
-				} catch (Exception ex) {
-					LOG.warn(attrName + ": " + attrValue + "\n" + ex.toString());
-				}
-			}
-		} catch (Exception ex) {
-			if (jmxCon != null) {
-				jmxCon.close();
-			}
-		}
-		return metricsRoot;
 	}
 
 	@Override
@@ -255,6 +214,9 @@ public class WebLogicConsumer extends DefaultConsumer implements
 					|| this.endpoint.isReadMessage()) {
 				initJMS();
 			}
+			if (this.endpoint.isReadMetrics()) {
+				initJMX();
+			}
 			timer.scheduleAtFixedRate(task, endpoint.getDelay(),
 					endpoint.getPeriod());
 			configured = true;
@@ -279,8 +241,7 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		// only allow running the timer task if we can run and are not
 		// suspended,
 		// and CamelContext must have been fully started
-		return endpoint.getCamelContext().getStatus().isStarted()
-				&& isRunAllowed() && !isSuspended();
+		return isRunAllowed() && !isSuspended();
 	}
 
 	@Override
@@ -308,6 +269,20 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		qc.start();
 	}
 
+	private ObjectNode processJMS() throws JMSException,
+			JsonGenerationException, JsonMappingException, IOException {
+		qc.start();
+		QueueSession qsess = qc.createQueueSession(false,
+				Session.AUTO_ACKNOWLEDGE);
+		browser = qsess.createBrowser(q);
+		List<Message> messages = Collections.list(browser.getEnumeration());
+
+		browser.close();
+		qsess.close();
+		qc.stop();
+		return generateJMSBody(messages);
+	}
+
 	private void initJMX() throws IOException, InstanceNotFoundException,
 			IntrospectionException, ReflectionException {
 		String[] endpoint = this.endpoint.getHost().split(":");
@@ -317,26 +292,57 @@ public class WebLogicConsumer extends DefaultConsumer implements
 		String jndiroot = new String("/jndi/iiop://" + hostname + ":" + port
 				+ "/");
 		String mserver = "weblogic.management.mbeanservers.runtime";
-		JMXServiceURL serviceURL = new JMXServiceURL(protocol, hostname, port,
-				jndiroot + mserver);
+		JMXServiceURL jmxServiceURL = new JMXServiceURL(protocol, hostname, port, jndiroot
+				+ mserver);
+		Map<String, String> jmxCredentials = new Hashtable<String, String>();
+		jmxCredentials.put(Context.SECURITY_PRINCIPAL, this.endpoint.getUser());
+		jmxCredentials.put(Context.SECURITY_CREDENTIALS,
+				this.endpoint.getPassword());
+		attributes = new HashSet<String>();
+		jmxCon = JMXConnectorFactory.connect(jmxServiceURL, jmxCredentials);
 
-		Hashtable<String, String> h = new Hashtable<String, String>();
-		h.put(Context.SECURITY_PRINCIPAL, this.endpoint.getUser());
-		h.put(Context.SECURITY_CREDENTIALS, this.endpoint.getPassword());
-		jmxCon = JMXConnectorFactory.connect(serviceURL, h);
-
-		String destinationName = this.endpoint.getDestinationName();
-		con = jmxCon.getMBeanServerConnection();
-		for (ObjectName objNames : con.queryNames(null, null)) {
-			if (objNames.getCanonicalName().contains("Name=" + destinationName)) {
-				this.bean = con.getMBeanInfo(objNames);
-				this.mbeanName = objNames;
-				break;
+		MBeanServerConnection con = jmxCon.getMBeanServerConnection();
+		if (this.mbeanName == null) {
+			for (ObjectName objName : con.queryNames(null, null)) {
+				if (objName.getCanonicalName().contains(
+						"Name=" + this.endpoint.getDestinationName())) {
+					this.mbeanName = objName;
+					break;
+				}
 			}
 		}
-		if (this.bean == null) {
-			throw new IOException("Destination Name " + destinationName
-					+ " does not exists in server " + this.endpoint.getHost());
+
+		if (attributes == null || attributes.size() == 0) {
+			attributes = new HashSet<String>();
+			this.bean = con.getMBeanInfo(this.mbeanName);
+			if (this.bean == null) {
+				throw new IOException("Destination Name " + this.mbeanName
+						+ " does not exists in server " + this.endpoint.getHost());
+			}
+			for (MBeanAttributeInfo attr : this.bean.getAttributes()) {
+				attributes.add(attr.getName());
+			}
 		}
+	}
+
+	private ObjectNode processJMX() throws IOException {
+		ObjectNode metricsRoot = mapper.createObjectNode();
+		try {
+			MBeanServerConnection con = jmxCon.getMBeanServerConnection();
+			for (String attrName : attributes) {
+				Object attrValue = null;
+				try {
+					attrValue = con.getAttribute(this.mbeanName, attrName);
+					if (attrValue != null) {
+						metricsRoot.put(attrName, attrValue.toString());
+					}
+				} catch (Exception ex) {
+					LOG.warn(attrName + ": " + attrValue + "\n" + ex.toString());
+				}
+			}
+		} catch (Exception ex) {
+			LOG.error(ex.getMessage(), ex);
+		}
+		return metricsRoot;
 	}
 }
