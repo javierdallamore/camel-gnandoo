@@ -38,7 +38,7 @@ import com.eventfabric.api.client.EventClient;
  *
  * @version $Revision: 1.1 $
  */
-@UriEndpoint(scheme = "eventfabric", syntax = "")
+@UriEndpoint(scheme = "eventfabric", syntax = "", title = "Event Fabric Endpoint")
 public class EventFabricEndpoint extends DefaultEndpoint {
 	private static final Logger LOG = LoggerFactory
 			.getLogger(EventFabricEndpoint.class);
