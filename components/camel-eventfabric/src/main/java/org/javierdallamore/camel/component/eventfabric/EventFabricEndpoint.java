@@ -59,6 +59,8 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	@UriParam
 	private String host;
 	@UriParam
+	private String path;
+	@UriParam
 	private int port;
 	@UriParam
 	private boolean secure;
@@ -85,8 +87,8 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 		super.doStart();
 		try {
 			if (eventClient == null || !eventClient.isAuthenticated()) {
-				streamsEndpoint = new EndPointInfo(host, "/streams", port, secure);
-				sessionsEndpoint = new EndPointInfo(host, "/sessions", port, secure);
+				streamsEndpoint = new EndPointInfo(host, joinPath("/streams"), port, secure);
+				sessionsEndpoint = new EndPointInfo(host, joinPath("/sessions"), port, secure);
 				eventClient = new EventClient(username, password, streamsEndpoint, sessionsEndpoint);
 				if (!eventClient.authenticate()) {
 					LOG.error("It was not possible to authenticate in Event Fabric. Check your credentials and endpoint");
@@ -96,6 +98,10 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 			LOG.error(e.getMessage());
 		}
 	}
+
+    private String joinPath(String rest) {
+        return path + rest;
+    }
 
 	@Override
 	protected void doStop() throws Exception {
@@ -161,6 +167,14 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 
 	public void setHost(String host) {
 		this.host = host;
+	}
+
+	public String getPath() {
+		return path;
+	}
+
+	public void setPath(String path) {
+		this.path = "/" + path.replaceAll("^/+", "").replaceAll("/+$", "");
 	}
 
 	public int getPort() {
