@@ -43,7 +43,7 @@ import com.pubnub.api.PubnubError;
  *
  * @version $Revision: 1.1 $
  */
-@UriEndpoint(scheme = "pubnub")
+@UriEndpoint(scheme = "pubnub", syntax = "", title = "Pubnub EndPoint")
 public class PubnubEndpoint extends DefaultEndpoint {
 	private static final Logger LOG = LoggerFactory.getLogger(PubnubEndpoint.class);
 	

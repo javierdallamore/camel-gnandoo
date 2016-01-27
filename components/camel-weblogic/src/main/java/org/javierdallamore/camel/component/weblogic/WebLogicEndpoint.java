@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  *
  * @version $Revision: 1.1 $
  */
-@UriEndpoint(scheme = "weblogic")
+@UriEndpoint(scheme = "weblogic", syntax = "", title = "WebLogic Endpoint")
 public class WebLogicEndpoint extends DefaultEndpoint {
 	private static final Logger LOG = LoggerFactory
 			.getLogger(WebLogicEndpoint.class);

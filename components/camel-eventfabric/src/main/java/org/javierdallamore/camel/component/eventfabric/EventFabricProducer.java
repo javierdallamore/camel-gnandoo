@@ -114,7 +114,7 @@ public class EventFabricProducer extends DefaultProducer {
 				eventClient.authenticate();
 				process(exchange);
 			} else {
-				LOG.error(String.format("Error sending %s to Event Fabric: %s", endpoint.getName(), response.getResult()));
+				LOG.error(String.format("Error sending %s to Event Fabric: %s. Data: %s", endpoint.getName(), response.getResult(), data));
 			}
 		} catch (IOException e) {
 			LOG.error(e.getMessage());
