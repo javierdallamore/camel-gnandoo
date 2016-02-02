@@ -58,13 +58,14 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.StartupListener;
 import org.apache.camel.impl.DefaultConsumer;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * @version $Revision: 1.1 $
@@ -306,6 +307,9 @@ public class WebLogicConsumer extends DefaultConsumer implements
 			for (ObjectName objName : con.queryNames(null, null)) {
 				if (objName.getCanonicalName().contains(
 						"Name=" + this.endpoint.getDestinationName())) {
+					LOG.info(objName.getDomain());
+					LOG.info(objName.getCanonicalName());
+					LOG.info(objName.toString());
 					this.mbeanName = objName;
 					break;
 				}

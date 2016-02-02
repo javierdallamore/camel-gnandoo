@@ -34,9 +34,24 @@
 			<artifactId>camel-core</artifactId>
 		</dependency>
 		<dependency>
-        	<groupId>com.eventfabric</groupId>
-        	<artifactId>api</artifactId>
-        	<version>0.1.0</version>
+			<groupId>com.eventfabric</groupId>
+			<artifactId>api</artifactId>
+			<version>0.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.5.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>2.6.3</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.6.3</version>
 		</dependency>
 		<!-- testing -->
 		<dependency>
