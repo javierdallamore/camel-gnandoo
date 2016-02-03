@@ -44,7 +44,7 @@ public class EventFabricProducer extends DefaultProducer {
 	private final EventFabricEndpoint endpoint;
 	private ObjectMapper mapper = new ObjectMapper();
 	private int attemps = 0;
-	
+
 	public EventFabricProducer(EventFabricEndpoint endpoint) {
 		super(endpoint);
 		this.endpoint = endpoint;
@@ -62,39 +62,42 @@ public class EventFabricProducer extends DefaultProducer {
 	 */
 	@Override
 	public void process(Exchange exchange) throws Exception {
-		attemps += 1;
-		String data;
-		if (endpoint.getInputEncoding() != null && !endpoint.getInputEncoding().isEmpty()) {
-			byte[] body = exchange.getIn().getBody(byte[].class);
-			Charset utf8charset = Charset.forName("UTF-8");
-			Charset inputcharset = Charset.forName(endpoint.getInputEncoding());
-			ByteBuffer inputBuffer = ByteBuffer.wrap(body);
-			CharBuffer charBuffer = inputcharset.decode(inputBuffer);
-			ByteBuffer outputBuffer = utf8charset.encode(charBuffer);
-			byte[] outputData = outputBuffer.array();
-			data = new String(outputData, "UTF-8");
-		} else {
-			data = exchange.getIn().getBody(String.class);
-		}
-		
-		ObjectNode jsonNode;
-		
-		Object result = mapper.readTree(data);
-		
-		if (result instanceof ArrayNode) {
-			jsonNode = mapper.createObjectNode();
-			ArrayNode node = jsonNode.putArray("data");
-			node.addAll((ArrayNode)result);
-		} else {
-			jsonNode = (ObjectNode)result;
-		}
-		
-		String channel = endpoint.getChannel();
-		EventClient eventClient = endpoint.getEventClient();
-		if (channel == null) {
-			channel = endpoint.getName();
-		}
 		try {
+			attemps += 1;
+			String data;
+			if (endpoint.getInputEncoding() != null
+					&& !endpoint.getInputEncoding().isEmpty()) {
+				byte[] body = exchange.getIn().getBody(byte[].class);
+				Charset utf8charset = Charset.forName("UTF-8");
+				Charset inputcharset = Charset.forName(endpoint
+						.getInputEncoding());
+				ByteBuffer inputBuffer = ByteBuffer.wrap(body);
+				CharBuffer charBuffer = inputcharset.decode(inputBuffer);
+				ByteBuffer outputBuffer = utf8charset.encode(charBuffer);
+				byte[] outputData = outputBuffer.array();
+				data = new String(outputData, "UTF-8");
+			} else {
+				data = exchange.getIn().getBody(String.class);
+			}
+
+			ObjectNode jsonNode;
+
+			Object result = mapper.readTree(data);
+
+			if (result instanceof ArrayNode) {
+				jsonNode = mapper.createObjectNode();
+				ArrayNode node = jsonNode.putArray("data");
+				node.addAll((ArrayNode) result);
+			} else {
+				jsonNode = (ObjectNode) result;
+			}
+
+			String channel = endpoint.getChannel();
+			EventClient eventClient = endpoint.getEventClient();
+			if (channel == null) {
+				channel = endpoint.getName();
+			}
+
 			String action = endpoint.getAction();
 			Event event = new Event(channel, jsonNode, endpoint.getBucket());
 			Response response;
@@ -106,18 +109,24 @@ public class EventFabricProducer extends DefaultProducer {
 				response = eventClient.patch(event);
 				expected = 200;
 			}
-			
+
 			if (response.getStatus() == expected) {
-				LOG.info(String.format("%s sent to Event Fabric", endpoint.getName()));
+				LOG.info(String.format("%s sent to Event Fabric",
+						endpoint.getName()));
 			} else if (response.getStatus() == 401 && attemps <= 3) {
-				LOG.error(String.format("Event Fabric session expired. Trying to log in again. Attemp: %d", attemps));
+				LOG.error(String
+						.format("Event Fabric session expired. Trying to log in again. Attemp: %d",
+								attemps));
 				eventClient.authenticate();
 				process(exchange);
 			} else {
-				LOG.error(String.format("Error sending %s to Event Fabric: %s. Data: %s", endpoint.getName(), response.getResult(), data));
+				LOG.error(String.format(
+						"Error sending %s to Event Fabric: %s. Data: %s",
+						endpoint.getName(), response.getResult(), data));
 			}
 		} catch (IOException e) {
 			LOG.error(e.getMessage());
+			throw e;
 		} finally {
 			attemps = 0;
 		}
