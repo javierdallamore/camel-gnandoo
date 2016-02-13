@@ -28,7 +28,6 @@
 	<modules>
 		<module>camel-pubnub</module>
 		<module>camel-eventfabric</module>
-		<module>camel-weblogic</module>
 	</modules>
 	<groupId>org.javierdallamore.camel-gnandoo</groupId>
     <version>2.16.1</version>
