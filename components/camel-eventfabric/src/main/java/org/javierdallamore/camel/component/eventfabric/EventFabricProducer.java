@@ -111,7 +111,7 @@ public class EventFabricProducer extends DefaultProducer {
 			}
 
 			if (response.getStatus() == expected) {
-				LOG.info(String.format("%s sent to Event Fabric",
+				LOG.debug(String.format("%s sent to Event Fabric",
 						endpoint.getName()));
 			} else if (response.getStatus() == 401 && attemps <= 3) {
 				LOG.error(String
