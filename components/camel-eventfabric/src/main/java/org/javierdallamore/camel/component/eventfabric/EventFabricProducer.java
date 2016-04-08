@@ -80,18 +80,6 @@ public class EventFabricProducer extends DefaultProducer {
 				data = exchange.getIn().getBody(String.class);
 			}
 
-			ObjectNode jsonNode;
-
-			Object result = mapper.readTree(data);
-
-			if (result instanceof ArrayNode) {
-				jsonNode = mapper.createObjectNode();
-				ArrayNode node = jsonNode.putArray("data");
-				node.addAll((ArrayNode) result);
-			} else {
-				jsonNode = (ObjectNode) result;
-			}
-
 			String channel = endpoint.getChannel();
 			EventClient eventClient = endpoint.getEventClient();
 			if (channel == null) {
@@ -99,7 +87,7 @@ public class EventFabricProducer extends DefaultProducer {
 			}
 
 			String action = endpoint.getAction();
-			Event event = new Event(channel, jsonNode, endpoint.getBucket());
+			Event event = new Event(channel, data, endpoint.getBucket());
 			Response response;
 			int expected;
 			if (action == null || !"patch".equals(action)) {
