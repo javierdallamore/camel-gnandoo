@@ -18,7 +18,6 @@
  */
 package org.javierdallamore.camel.component.eventfabric;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -31,9 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.eventfabric.api.client.EventClient;
 import com.eventfabric.api.client.Response;
 import com.eventfabric.api.model.Event;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * @version $Revision: 1.1 $
@@ -42,7 +38,6 @@ public class EventFabricProducer extends DefaultProducer {
 	private static final Logger LOG = LoggerFactory
 			.getLogger(EventFabricProducer.class);
 	private final EventFabricEndpoint endpoint;
-	private ObjectMapper mapper = new ObjectMapper();
 	private int attemps = 0;
 
 	public EventFabricProducer(EventFabricEndpoint endpoint) {
@@ -98,23 +93,19 @@ public class EventFabricProducer extends DefaultProducer {
 				expected = 200;
 			}
 
-			if (response.getStatus() == expected) {
-				LOG.info(String.format("%s sent to Event Fabric",
-						endpoint.getName()));
-			} else if (response.getStatus() == 401 && attemps <= 3) {
-				LOG.error(String
-						.format("Event Fabric session expired. Trying to log in again. Attemp: %d",
-								attemps));
+			if (response.getStatus() == 401 && attemps <= 3) {
+				String error = String.format("Event Fabric session expired. Trying to log in again. Status: %s. Attemp: %d",
+								response.getStatus(), attemps);
+				LOG.error(error);
 				eventClient.authenticate();
 				process(exchange);
-			} else {
+			} else if (response.getStatus() != expected){
 				LOG.error(String.format(
-						"Error sending %s to Event Fabric: %s. Data: %s",
-						endpoint.getName(), response.getResult(), data));
+						"Error sending %s to Event Fabric: %s - %s. Data: %s",
+						endpoint.getName(), response.getStatus(), response.getResult(), data));
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			LOG.error(e.getMessage());
-			throw e;
 		} finally {
 			attemps = 0;
 		}
