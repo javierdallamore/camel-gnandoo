@@ -93,9 +93,9 @@ public class EventFabricProducer extends DefaultProducer {
 				expected = 200;
 			}
 
-			if (response.getStatus() == 401 && attemps <= 3) {
-				String error = String.format("Event Fabric session expired. Trying to log in again. Status: %s. Attemp: %d",
-								response.getStatus(), attemps);
+			if ((response.getStatus() >= 400 && response.getStatus() < 600) && attemps <= 3) {
+				String error = String.format("Event Fabric session error. Trying to log in again. Status: %s. Attemp: %d",
+                        response.getStatus(), attemps);
 				LOG.error(error);
 				eventClient.authenticate();
 				process(exchange);
