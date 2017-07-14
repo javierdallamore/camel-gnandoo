@@ -29,7 +29,6 @@ import org.apache.camel.spi.UriParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.eventfabric.api.client.EndPointInfo;
 import com.eventfabric.api.client.EventClient;
 
 /**
@@ -42,39 +41,22 @@ import com.eventfabric.api.client.EventClient;
 public class EventFabricEndpoint extends DefaultEndpoint {
 	private static final Logger LOG = LoggerFactory
 			.getLogger(EventFabricEndpoint.class);
+    private EventClient eventClient;
 	private final String name;
-	private EndPointInfo streamsEndpoint;
-	private EndPointInfo sessionsEndpoint;
-	private EventClient eventClient;
-	@UriParam
-	private String username;
-	@UriParam
-	private String password;
 	@UriParam
 	private String channel;
 	@UriParam
 	private String bucket;
 	@UriParam
 	private String action;
-	@UriParam
-	private String host;
-	@UriParam
-	private String path;
-	@UriParam
-	private int port;
-	@UriParam
-	private boolean secure;
-	@UriParam
-	private String inputEncoding;
-
-	public EventClient getEventClient() {
-		return eventClient;
-	}
+    @UriParam
+    private String inputEncoding;
 
 	public EventFabricEndpoint(String uri, EventFabricComponent component,
-			String name) {
+			String name, EventClient eventClient) {
 		super(uri, component);
 		this.name = name;	
+        this.eventClient = eventClient;
 	}
 
 	@Override
@@ -82,26 +64,14 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 		return true;
 	}
 
+    public EventClient getEventClient() {
+        return eventClient;
+    }
+
 	@Override
 	protected void doStart() throws Exception {
 		super.doStart();
-		try {
-			if (eventClient == null || !eventClient.isAuthenticated()) {
-				streamsEndpoint = new EndPointInfo(host, joinPath("/streams"), port, secure);
-				sessionsEndpoint = new EndPointInfo(host, joinPath("/sessions"), port, secure);
-				eventClient = new EventClient(username, password, streamsEndpoint, sessionsEndpoint);
-				if (!eventClient.authenticate()) {
-					LOG.error("It was not possible to authenticate in Event Fabric. Check your credentials and endpoint");
-				};
-			}
-		} catch (IOException e) {
-			LOG.error(e.getMessage());
-		}
 	}
-
-    private String joinPath(String rest) {
-        return path + rest;
-    }
 
 	@Override
 	protected void doStop() throws Exception {
@@ -129,7 +99,7 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	public void setChannel(String channel) {
 		this.channel = channel;
 	}
-	
+
 	public String getBucket() {
 		return bucket;
 	}
@@ -137,68 +107,21 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	public void setBucket(String bucket) {
 		this.bucket = bucket;
 	}
-	
+
 	public String getAction() {
 		return action;
 	}
 
 	public void setAction(String action) {
-		this.action = action;
-	}
-	public String getUsername() {
-		return username;
-	}
+        this.action = action;
+    }
 
-	public void setUsername(String username) {
-		this.username = username;
-	}
+    public String getInputEncoding() {
+        return inputEncoding;
+    }
 
-	public String getPassword() {
-		return password;
-	}
+    public void setInputEncoding(String encoding) {
+        this.inputEncoding = encoding;
+    }
 
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
-	public String getHost() {
-		return host;
-	}
-
-	public void setHost(String host) {
-		this.host = host;
-	}
-
-	public String getPath() {
-		return path;
-	}
-
-	public void setPath(String path) {
-		this.path = "/" + path.replaceAll("^/+", "").replaceAll("/+$", "");
-	}
-
-	public int getPort() {
-		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	public boolean isSecure() {
-		return secure;
-	}
-
-	public void setSecure(boolean secure) {
-		this.secure = secure;
-	}
-
-	public String getInputEncoding() {
-		return inputEncoding;
-	}
-
-	public void setInputEncoding(String encoding) {
-		this.inputEncoding = encoding;
-	}
-	
 }

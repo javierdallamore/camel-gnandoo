@@ -22,6 +22,11 @@ import java.util.Map;
 
 import org.apache.camel.Endpoint;
 import org.apache.camel.impl.DefaultComponent;
+import org.apache.camel.CamelContext;
+import org.apache.camel.util.CamelContextHelper;
+import com.eventfabric.api.client.EventClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A component for working with <a href="http://eventfabric.com/">EventFabric</a>
@@ -29,6 +34,10 @@ import org.apache.camel.impl.DefaultComponent;
  * @version $Revision: 1.1 $
  */
 public class EventFabricComponent extends DefaultComponent {
+	private static final Logger LOG = LoggerFactory
+			.getLogger(EventFabricComponent.class);
+	private EventClient eventClient;
+
 	/**
 	 * Creates an EventFabric endpoint. {@inheritDoc}
 	 *
@@ -41,7 +50,12 @@ public class EventFabricComponent extends DefaultComponent {
 	@Override
 	protected Endpoint createEndpoint(String uri, String remaining,
 			Map<String, Object> parameters) throws Exception {
-		Endpoint endpoint = new EventFabricEndpoint(uri, this, remaining);
+        LOG.info("Loading" + remaining);
+        eventClient = CamelContextHelper.mandatoryLookup(getCamelContext(), remaining, EventClient.class);
+
+		LOG.info(eventClient.toString());
+
+		Endpoint endpoint = new EventFabricEndpoint(uri, this, remaining, eventClient);
 		setProperties(endpoint, parameters);
 		return endpoint;
 	}

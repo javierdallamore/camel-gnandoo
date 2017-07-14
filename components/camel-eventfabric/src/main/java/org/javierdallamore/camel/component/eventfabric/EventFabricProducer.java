@@ -76,7 +76,6 @@ public class EventFabricProducer extends DefaultProducer {
 			}
 
 			String channel = endpoint.getChannel();
-			EventClient eventClient = endpoint.getEventClient();
 			if (channel == null) {
 				channel = endpoint.getName();
 			}
@@ -85,6 +84,8 @@ public class EventFabricProducer extends DefaultProducer {
 			Event event = new Event(channel, data, endpoint.getBucket());
 			Response response;
 			int expected;
+
+            EventClient eventClient = endpoint.getEventClient();
 			if (action == null || !"patch".equals(action)) {
 				response = eventClient.send(event);
 				expected = 201;
@@ -93,12 +94,13 @@ public class EventFabricProducer extends DefaultProducer {
 				expected = 200;
 			}
 
-			if ((response.getStatus() >= 400 && response.getStatus() < 600) && attemps <= 3) {
+			if ((response.getStatus() >= 400 && response.getStatus() < 600) && attemps <= 1) {
 				String error = String.format("Event Fabric session error. Trying to log in again. Status: %s. Attemp: %d",
                         response.getStatus(), attemps);
 				LOG.error(error);
 				eventClient.authenticate();
 				process(exchange);
+                return;
 			} else if (response.getStatus() != expected){
 				LOG.error(String.format(
 						"Error sending %s to Event Fabric: %s - %s. Data: %s",
