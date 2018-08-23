@@ -51,11 +51,17 @@ public class EventFabricEndpoint extends DefaultEndpoint {
 	private String action;
     @UriParam
     private String inputEncoding;
+	@UriParam
+	private String key;
+    @UriParam
+    private String provFrom;
+    @UriParam
+    private String provVia;
 
 	public EventFabricEndpoint(String uri, EventFabricComponent component,
 			String name, EventClient eventClient) {
 		super(uri, component);
-		this.name = name;	
+		this.name = name;
         this.eventClient = eventClient;
 	}
 
@@ -124,4 +130,27 @@ public class EventFabricEndpoint extends DefaultEndpoint {
         this.inputEncoding = encoding;
     }
 
+	public String getKey() {
+		return key;
+	}
+
+	public void setKey(String key) {
+		this.key = key;
+	}
+
+    public String getProvFrom() {
+        return provFrom;
+    }
+
+    public void setProvFrom(String provFrom) {
+        this.provFrom = provFrom;
+    }
+
+    public String getProvVia() {
+        return provVia;
+    }
+
+    public void setProvVia(String provVia) {
+        this.provVia = provVia;
+    }
 }

@@ -82,12 +82,13 @@ public class EventFabricProducer extends DefaultProducer {
 
 			String action = endpoint.getAction();
 			Event event = new Event(channel, data, endpoint.getBucket());
+            event.setKey(endpoint.getKey());
 			Response response;
 			int expected;
 
             EventClient eventClient = endpoint.getEventClient();
 			if (action == null || !"patch".equals(action)) {
-				response = eventClient.send(event);
+				response = eventClient.send(event, endpoint.getProvFrom(), endpoint.getProvVia());
 				expected = 201;
 			} else {
 				response = eventClient.patch(event);
