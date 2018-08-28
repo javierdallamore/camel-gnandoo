@@ -50,7 +50,7 @@ public class EventFabricComponent extends DefaultComponent {
 	@Override
 	protected Endpoint createEndpoint(String uri, String remaining,
 			Map<String, Object> parameters) throws Exception {
-        LOG.info("Loading" + remaining);
+        LOG.info("Loading: " + remaining);
         eventClient = CamelContextHelper.mandatoryLookup(getCamelContext(), remaining, EventClient.class);
 
 		LOG.info(eventClient.toString());

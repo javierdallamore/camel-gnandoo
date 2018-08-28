@@ -88,7 +88,9 @@ public class EventFabricProducer extends DefaultProducer {
 
             EventClient eventClient = endpoint.getEventClient();
 			if (action == null || !"patch".equals(action)) {
-				response = eventClient.send(event, endpoint.getProvFrom(), endpoint.getProvVia());
+                String provFrom = exchange.getProperty("provFrom", String.class);
+                String provVia = exchange.getProperty("provVia", String.class);
+				response = eventClient.send(event, provFrom, provVia);
 				expected = 201;
 			} else {
 				response = eventClient.patch(event);
